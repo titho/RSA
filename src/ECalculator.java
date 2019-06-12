@@ -9,6 +9,8 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
 
+import sun.misc.Contended;
+
 public class ECalculator {
 	static int precision = 0;
 	static int numThreads = 0;
