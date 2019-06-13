@@ -1,60 +1,80 @@
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.math.BigInteger;
 
-public class CalculationThread extends Thread {
-	private static final BigDecimal ONE = new BigDecimal(1);
-	private int index;
-	private int numThreads;
-	private int precision;
-	private BigDecimal result = new BigDecimal(0);
+import org.apfloat.ApintMath;
 
-	public BigDecimal getResult() {
-		return result;
-	}
+import javax.swing.*;
 
-	@Override
-	public void run() {
-		Logger.log("Thread " + index + " started.");
-		long startedAt = System.currentTimeMillis();
-		BigDecimal res;
-		for (int i = 0;; i++) {
-			if (i % numThreads != index) { // divide the work between the threads
-				continue;
-			}
-			res = getRowResult(i);
-			result = result.add(res);
-			if (res.scaleByPowerOfTen(precision).compareTo(ONE) < 0) { // is it time to stop?
-				break;
-			}
-		}
-		Logger.log(
-				"Thread " + index + " stopped. Execution time: " + (System.currentTimeMillis() - startedAt) + " ms.");
-	}
+public class CalculationThread extends Thread{
+    private String name;
+    private int k;
+    private int t;
+    private int p;
+    private int index;
+    private Boolean finished;
+    private Boolean quiet;
+    private long runtime;
+    private BigDecimal sum = BigDecimal.ZERO;
+    private JTextArea console;
 
-	public CalculationThread(int index, int numThreads, int precision) {
-		super();
-		this.index = index;
-		this.numThreads = numThreads; 
-		this.precision = precision;
-	}
+    public CalculationThread(String name, int k, int t, int p, int index, Boolean quiet, JTextArea console) {
+        this.name = name;
+        this.k = k;
+        this.t = t;
+        this.p = p;
+        this.index = index;
+        this.finished = false;
+        this.quiet = quiet;
+        this.console = console;
+    }
 
-	private BigDecimal getRowResult(int k) {
-		BigDecimal top = new BigDecimal(3 - 4 * k * k);
-		BigDecimal bot = new BigDecimal(calculateFactorial(2 * k + 1));
-		BigDecimal res = top.divide(bot, precision, RoundingMode.HALF_UP);
-//		Logger.log(res.toString());
-		return res;
-	}
+    public void run() {
+        if (!quiet  && console == null) {
+            System.out.println(name + " started");
+        } else if(!quiet && console != null){
+            console.append(name + " started\n");
+        }
+        long start =  System.currentTimeMillis();
 
-	private BigInteger calculateFactorial(int number) {
-		BigInteger result = new BigInteger("1");
-		for (int i = 1; i <= number; i++) {
-			result = result.multiply(new BigInteger("" + i));
-		}
-		return result;
-	}
-	// e = Sum (
-	// [ 3 - (4k)^2 ] / (2k+1)!
-	// )
+        for (int i = index; i <= k; i+=t) {
+            if (!quiet  && console == null) {
+                System.out.println(name + " calculating for k=" + i);
+            }
+
+            sum = sum.add(calculateValue(i));
+        }
+
+        runtime = System.currentTimeMillis() - start;
+        if (!quiet && console == null) {
+            System.out.println(name + " stopped.");
+        } else if (!quiet && console != null) {
+            console.append(name + " stopped.\n");
+        }
+
+        this.finished = true;
+    }
+
+
+    private BigDecimal calculateValue(int k){
+        BigDecimal numerator = new BigDecimal(3 - 4 * Math.pow(k, 2));
+        BigDecimal denominator = new BigDecimal(ApintMath.factorial(2*k + 1, 10).toBigInteger());
+        BigDecimal result = numerator.divide(denominator, p, RoundingMode.HALF_UP);
+        return result;
+    }
+
+    public boolean isFinished() {
+        return finished;
+    }
+
+    public String getThreadName() {
+        return name;
+    }
+
+    public BigDecimal getSum() {
+        return sum;
+    }
+
+    public long getRuntime() {
+        return runtime;
+    }
 }
